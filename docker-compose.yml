@@ -1,13 +1,14 @@
-# ============================================================
-# Workshop 2 — ETL Pipeline with Apache Airflow + Streamlit
+# Workshop 2 — ETL Pipeline (Apache Airflow + PostgreSQL + Streamlit)
 #
 # Services:
 #   postgres           → PostgreSQL (Airflow metadata + grammys_db + data_warehouse)
-#   airflow-init       → Initializes Airflow (runs once)
-#   airflow-webserver  → UI at http://localhost:8080  (admin / admin)
-#   airflow-scheduler  → Executes DAG tasks
-#   dashboard          → Streamlit dashboard at http://localhost:8501
-# ============================================================
+#   airflow-init       → DB migration + admin user (runs once)
+#   airflow-webserver  → http://localhost:8080
+#   airflow-scheduler  → DAG execution
+#   dashboard          → Streamlit → http://localhost:8501
+#
+# Configuration: copy .env.example to .env and adjust values.
+# Never commit .env. Defaults below are for local development only.
 
 x-airflow-common: &airflow-common
   build:
@@ -15,16 +16,18 @@ x-airflow-common: &airflow-common
     dockerfile: Dockerfile
   environment: &airflow-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg='
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER:-airflow}:${POSTGRES_PASSWORD:-airflow}@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
     PYTHONPATH: /opt/airflow/scripts
-    AIRFLOW_CONN_GRAMMYS_DB: postgresql+psycopg2://airflow:airflow@postgres/grammys_db
-    AIRFLOW_CONN_DATA_WAREHOUSE: postgresql+psycopg2://airflow:airflow@postgres/data_warehouse
-    GOOGLE_CREDENTIALS_PATH: /opt/airflow/credentials/service_account.json
+    AIRFLOW_CONN_GRAMMYS_DB: postgresql+psycopg2://${POSTGRES_USER:-airflow}:${POSTGRES_PASSWORD:-airflow}@postgres/grammys_db
+    AIRFLOW_CONN_DATA_WAREHOUSE: postgresql+psycopg2://${POSTGRES_USER:-airflow}:${POSTGRES_PASSWORD:-airflow}@postgres/data_warehouse
+    GOOGLE_CREDENTIALS_PATH: ${GOOGLE_CREDENTIALS_PATH:-/opt/airflow/credentials/oauth_credentials.json}
     GOOGLE_DRIVE_FOLDER_ID: ${GOOGLE_DRIVE_FOLDER_ID:-}
+    AIRFLOW_ADMIN_USERNAME: ${AIRFLOW_ADMIN_USERNAME:-admin}
+    AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-admin}
   volumes:
     - ./dags:/opt/airflow/dags
     - ./scripts:/opt/airflow/scripts
@@ -43,16 +46,16 @@ services:
     image: postgres:15
     container_name: workshop2_postgres
     environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
+      POSTGRES_USER: ${POSTGRES_USER:-airflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airflow}
+      POSTGRES_DB: ${POSTGRES_DB:-airflow}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "airflow"]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" || exit 1"]
       interval: 10s
       retries: 5
       start_period: 5s
@@ -67,12 +70,12 @@ services:
       - |
         airflow db migrate && \
         airflow users create \
-          --username admin \
-          --password admin \
+          --username "${AIRFLOW_ADMIN_USERNAME:-admin}" \
+          --password "${AIRFLOW_ADMIN_PASSWORD:-admin}" \
           --firstname Admin \
           --lastname User \
           --role Admin \
-          --email admin@workshop.com
+          --email admin@localhost
     restart: "no"
 
   airflow-webserver:
@@ -80,7 +83,7 @@ services:
     container_name: workshop2_airflow_webserver
     command: webserver
     ports:
-      - "8080:8080"
+      - "${AIRFLOW_WEBSERVER_PORT:-8080}:8080"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
@@ -105,13 +108,13 @@ services:
       dockerfile: Dockerfile
     container_name: workshop2_dashboard
     ports:
-      - "8501:8501"
+      - "${DASHBOARD_PORT:-8501}:8501"
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: data_warehouse
-      DB_USER: airflow
-      DB_PASSWORD: airflow
+      DB_USER: ${POSTGRES_USER:-airflow}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-airflow}
     depends_on:
       postgres:
         condition: service_healthy

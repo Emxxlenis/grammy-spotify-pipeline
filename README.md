@@ -138,14 +138,10 @@ load_grammys_source_db → extract_grammys_db ────────┘       
 git clone <repo-url>
 cd workshop2
 mkdir -p credentials logs plugins
+cp .env.example .env
 ```
 
-Create a `.env` file:
-```env
-AIRFLOW_UID=50000
-GOOGLE_CREDENTIALS_PATH=/opt/airflow/credentials/service_account.json
-GOOGLE_DRIVE_FOLDER_ID=<your-folder-id>
-```
+Edit `.env` and set at least `GOOGLE_DRIVE_FOLDER_ID` if you use Drive upload. For local development the defaults are sufficient; change `POSTGRES_PASSWORD`, `AIRFLOW_FERNET_KEY`, and `AIRFLOW_ADMIN_PASSWORD` before any shared or production-like deployment.
 
 ### 2. Start all services
 

@@ -1,6 +1,5 @@
 FROM apache/airflow:2.9.3
 
-# Instala las dependencias del proyecto en la imagen personalizada
-# Esto evita reinstalarlas cada vez que el contenedor arranca
+# Install project dependencies into the image (avoids reinstalling on every container start).
 COPY requirements.txt /requirements.txt
 RUN pip install --no-cache-dir -r /requirements.txt
