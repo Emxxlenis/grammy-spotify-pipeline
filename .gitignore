@@ -1,0 +1,36 @@
+# ── Airflow ───────────────────────────────────────────────────────────────────
+logs/
+__pycache__/
+*.pyc
+*.pyo
+.airflow/
+
+# ── Environment ───────────────────────────────────────────────────────────────
+.env
+*.env
+
+# ── Python ────────────────────────────────────────────────────────────────────
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── Credentials & secrets (never commit these) ────────────────────────────────
+credentials/
+*.pem
+*.key
+
+# ── Generated data (staging & output — reproducible by running the DAG) ───────
+data/staging/
+data/output/
+
+# ── Docker volumes ────────────────────────────────────────────────────────────
+postgres_data/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
