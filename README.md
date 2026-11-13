@@ -1,253 +1,114 @@
-# Workshop 2 — ETL Pipeline: Spotify × Grammy Awards
+# Spotify × Grammy Analytics Warehouse
 
-End-to-end ETL pipeline built with **Apache Airflow**, **PostgreSQL**, and **Streamlit**. Extracts data from a Spotify CSV and a Grammy Awards database, cleans and merges both datasets, loads the result into a star-schema Data Warehouse, and visualizes insights through an interactive dashboard.
+An orchestrated pipeline that joins a Spotify catalog with the Grammy Awards, loads a star-schema warehouse, and answers a concrete question: does the award show up in popularity.
 
----
+**Demo:** [public walkthrough](https://emxxlenis.github.io/grammy-spotify-pipeline/)
+
+The interactive Streamlit dashboard runs locally, on top of PostgreSQL, after the Airflow DAG finishes. The public page publishes the aggregates from the same cleaning and join logic, so it can be opened without starting the stack.
 
 ## Stack
 
 | Layer | Technology |
 |---|---|
 | Orchestration | Apache Airflow 2.9.3 |
-| Storage | PostgreSQL 15 |
-| Transformation | Python 3.12 + pandas |
+| Warehouse | PostgreSQL 15 |
+| Transform | Python 3.12 + pandas |
 | Dashboard | Streamlit + Plotly |
-| Infrastructure | Docker + Docker Compose |
-| Cloud storage | Google Drive API (OAuth2) |
-
----
-
-## Project Structure
-
-```
-workshop2/
-├── dags/
-│   └── workshop2_etl_dag.py      # Airflow DAG — 8 tasks
-├── scripts/
-│   ├── extract.py                 # Extract from CSV and PostgreSQL
-│   ├── clean.py                   # Cleaning and normalization
-│   ├── transform.py               # Dataset merge
-│   ├── load.py                    # DW load + Google Drive upload
-│   ├── create_schema.sql          # Star schema DDL
-│   ├── create_grammys_table.sql   # Source table DDL
-│   ├── init-db.sh                 # Creates grammys_db and data_warehouse
-│   └── generate_token.py          # OAuth2 token generator for Google Drive
-├── dashboard/
-│   ├── app.py                     # Streamlit dashboard
-│   ├── Dockerfile
-│   └── requirements.txt
-├── data/
-│   ├── spotify_dataset.csv        # Spotify source data
-│   └── the_grammy_awards.csv      # Grammy Awards source data
-├── credentials/                   # Git-ignored — put credentials here
-├── docker-compose.yml
-├── Dockerfile
-├── requirements.txt
-└── .env
-```
-
----
+| Runtime | Docker Compose |
+| Optional export | Google Drive, OAuth2 |
 
 ## Architecture
 
-```
-[spotify_dataset.csv] ──────────────────────────────────┐
-                                                          ▼
-[the_grammy_awards.csv] → [grammys_db] → [Airflow DAG] → [data_warehouse] → [Streamlit :8501]
-                                                    │
-                                                    └──────────────────────→ [Google Drive]
+```text
+spotify_dataset.csv ─────────────────────────────┐
+                                                  ▼
+the_grammy_awards.csv → grammys_db → Airflow DAG → data_warehouse → Streamlit :8501
+                                              │
+                                              └──────────────────→ Google Drive (optional)
 ```
 
-### Databases (all on the same PostgreSQL instance)
+Three databases share one PostgreSQL instance:
 
-| Database | Purpose |
+| Database | Role |
 |---|---|
-| `airflow` | Airflow internal metadata |
-| `grammys_db` | Source OLTP database (simulates a production system) |
-| `data_warehouse` | Analytical destination — star schema |
+| `airflow` | Scheduler metadata |
+| `grammys_db` | Source system for the awards |
+| `data_warehouse` | Star schema used by the dashboard |
 
----
+## DAG
 
-## DAG — Task Flow
+`dags/music_analytics_dag.py`, id `music_analytics_pipeline`.
 
-```
-extract_spotify_csv ────────────────────────────────┐
-                                                     ├─→ clean_datasets → transform_and_merge ─→ load_csv_output → store_google_drive
-load_grammys_source_db → extract_grammys_db ────────┘                                     │
-                                                                                            └─→ load_data_warehouse
-```
-
-| Task | Description |
-|---|---|
-| `extract_spotify_csv` | Reads Spotify CSV into staging |
-| `load_grammys_source_db` | Loads Grammy CSV into grammys_db |
-| `extract_grammys_db` | Extracts Grammy data from PostgreSQL |
-| `clean_datasets` | Deduplicates, fills nulls, normalizes artist keys |
-| `transform_and_merge` | LEFT JOIN Spotify ← Grammy on `artist_key` |
-| `load_csv_output` | Saves merged CSV to `/data/output/` |
-| `store_google_drive` | Uploads CSV to Google Drive (optional) |
-| `load_data_warehouse` | Loads star schema with TRUNCATE + RELOAD |
-
----
-
-## Star Schema
-
-```
-                  ┌─────────────┐
-                  │  dim_time   │
-                  │  time_id PK │
-                  │  year       │
-                  └──────┬──────┘
-                         │
-┌─────────────┐   ┌──────┴──────────┐   ┌─────────────────┐
-│  dim_artist │   │   fact_music    │   │   dim_track      │
-│  artist_id  │◄──│  fact_id PK     │──►│  track_id PK     │
-│  artist_name│   │  artist_id FK   │   │  track_name      │
-└─────────────┘   │  track_id FK    │   │  album_name      │
-                  │  time_id FK     │   │  genre           │
-                  │  award_id FK    │   │  danceability    │
-                  │  popularity     │   │  energy ...      │
-                  │  is_winner      │   └─────────────────┘
-                  │  is_nominated   │
-                  └──────┬──────────┘
-                         │
-                  ┌──────┴──────┐
-                  │  dim_award  │
-                  │  award_id PK│
-                  │  category   │
-                  │  ceremony   │
-                  │  nominee    │
-                  └─────────────┘
+```text
+extract_spotify_csv ─────────────────────────┐
+                                             ├─→ clean_datasets → transform_and_merge ─→ load_csv_output → store_google_drive
+load_grammys_source_db → extract_grammys_db ─┘                                     │
+                                                                                     └─→ load_data_warehouse
 ```
 
-**Fact grain:** one row per `(artist × track × award year × award category)`
+Fact grain: one row per artist, track, award year, and award category. The load is truncate-and-reload, so rerunning the DAG does not duplicate facts.
 
-**Load strategy:** TRUNCATE + RELOAD — the DAG can be re-triggered any number of times without duplicating data.
+The join is a left join from Spotify to the awards on a normalized artist key. Collaboration credits use the first artist. Tracks with no award stay in the warehouse.
 
----
+After a successful load, the warehouse is on the order of 17,600 artists, 89,741 tracks, 62 award years, and about 101,872 fact rows. Awards in the source cover 1958–2019, and every row in that source is a winner.
 
-## Setup & Execution
+## Run it
 
-### Prerequisites
-- Docker Engine + Docker Compose v2
-- Python 3.11+ (only for generating the Google Drive token)
-
-### 1. Clone and configure
+Requirements: Docker Engine and Docker Compose v2.
 
 ```bash
-git clone <repo-url>
-cd workshop2
+git clone https://github.com/Emxxlenis/grammy-spotify-pipeline.git
+cd grammy-spotify-pipeline
 mkdir -p credentials logs plugins
 cp .env.example .env
-```
-
-Edit `.env` and set at least `GOOGLE_DRIVE_FOLDER_ID` if you use Drive upload. For local development the defaults are sufficient; change `POSTGRES_PASSWORD`, `AIRFLOW_FERNET_KEY`, and `AIRFLOW_ADMIN_PASSWORD` before any shared or production-like deployment.
-
-### 2. Start all services
-
-```bash
 docker compose up -d
 ```
 
-Wait ~60 seconds for PostgreSQL and Airflow to become healthy.
+Change `POSTGRES_PASSWORD`, `AIRFLOW_FERNET_KEY`, and `AIRFLOW_ADMIN_PASSWORD` before using this anywhere other than a local machine. Drive upload also needs `GOOGLE_DRIVE_FOLDER_ID`.
 
-| Service | URL | Credentials |
+| Service | URL | Default login |
 |---|---|---|
-| Airflow UI | http://localhost:8080 | admin / admin |
-| Streamlit Dashboard | http://localhost:8501 | — |
+| Airflow | http://localhost:8080 | admin / admin |
+| Dashboard | http://localhost:8501 | — |
 
-### 3. Run the pipeline
+Turn on `music_analytics_pipeline` in the Airflow UI and trigger it, or:
 
-**Via Airflow UI:**
-1. Go to http://localhost:8080
-2. Toggle ON the `workshop2_etl_pipeline` DAG
-3. Click the ▶ (Trigger DAG) button
-
-**Via CLI:**
 ```bash
-docker exec workshop2_airflow_scheduler airflow dags trigger workshop2_etl_pipeline
+docker exec music_dw_airflow_scheduler airflow dags trigger music_analytics_pipeline
 ```
 
-### 4. Verify the Data Warehouse
+Check the load:
 
 ```bash
-docker exec -it workshop2_postgres psql -U airflow -d data_warehouse -c "
+docker exec -it music_dw_postgres psql -U airflow -d data_warehouse -c "
   SELECT
     (SELECT COUNT(*) FROM dim_artist) AS artists,
     (SELECT COUNT(*) FROM dim_track)  AS tracks,
-    (SELECT COUNT(*) FROM dim_time)   AS years,
-    (SELECT COUNT(*) FROM dim_award)  AS awards,
     (SELECT COUNT(*) FROM fact_music) AS facts;
 "
 ```
 
-Expected output: ~17,649 artists | ~89,741 tracks | 62 years | ~1,158 awards | ~101,872 facts
+The dashboard at http://localhost:8501 reads `fact_music` directly. It stays empty until the DAG has loaded the warehouse.
 
-### 5. Open the dashboard
+Stop the stack with `docker compose down`. Add `-v` to drop the database volume too.
 
-Go to http://localhost:8501 — it loads automatically once the DAG completes.
+## Google Drive export
 
----
+`store_google_drive` is optional. It uploads the merged CSV with a user OAuth token, because a service account has no quota on a personal Drive.
 
-## Google Drive Setup (optional)
+1. Create a desktop OAuth client in Google Cloud and save it as `credentials/oauth_credentials.json`.
+2. `pip install google-auth-oauthlib` and run `python3 scripts/generate_token.py`.
+3. Set `GOOGLE_DRIVE_FOLDER_ID` in `.env` and trigger the DAG again.
 
-The `store_google_drive` task uploads the merged CSV to a Google Drive folder.
+Credentials stay out of git.
 
-### Steps
+## Decisions worth keeping
 
-1. **Create an OAuth 2.0 Client ID** in [Google Cloud Console](https://console.cloud.google.com/):
-   - APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID
-   - Application type: **Desktop app**
-   - Download the JSON → save as `credentials/oauth_credentials.json`
-
-2. **Generate the access token** (run once, outside Docker):
-   ```bash
-   pip install google-auth-oauthlib
-   python3 scripts/generate_token.py
-   ```
-   A browser window opens. Authorize with your Google account. This creates `credentials/token.json`.
-
-3. **Configure `.env`** with your Drive folder ID (from the URL):
-   ```env
-   GOOGLE_DRIVE_FOLDER_ID=<folder-id-from-url>
-   ```
-
-4. Re-trigger the DAG. The task uploads on first run and updates the file on subsequent runs.
-
-> **Note:** Service Accounts cannot upload to personal Google Drive (no storage quota). This project uses OAuth2 user credentials stored in `token.json`, which count against your personal Drive quota.
-
----
-
-## Key EDA Findings
-
-| Finding | Impact on Pipeline |
+| Decision | Why |
 |---|---|
-| Grammy dataset contains **only winners** (`winner=True` for all rows) | `is_nominated` and `is_winner` are equivalent for Grammy-linked artists |
-| Spotify artists use `";"` as collaboration separator | Only the first artist is used for the cross-dataset join |
-| 24,259 duplicate `track_id` entries (same track, multiple genres) | Deduplicated by `track_id` before loading `dim_track` |
-| Grammy data spans **1958–2019**; Spotify skews more recent | The join only matches artists present in both datasets |
-| `artist` field is null in some Grammy rows | Fallback to `nominee` field when `artist` is missing |
-
----
-
-## Design Decisions
-
-| Decision | Reason |
-|---|---|
-| Star schema over snowflake | Simpler queries, better analytical performance, industry standard for DWs |
-| `TEXT` instead of `VARCHAR(n)` | Prevents `StringDataRightTruncation` on long track or album names |
-| LEFT JOIN (Spotify → Grammy) | Preserves all Spotify tracks; Grammy data is added when available |
-| `artist_key` normalization | Case-insensitive matching across datasets with inconsistent casing |
-| SQLAlchemy removed from `requirements.txt` | Airflow manages its own SQLAlchemy version; a second install causes ORM conflicts |
-| OAuth2 over Service Account for Drive | Service Accounts have no personal Drive quota; OAuth2 uses the user's quota |
-| TRUNCATE + RELOAD | Idempotent loads — safe to re-run the DAG without duplicating data |
-| LocalExecutor over CeleryExecutor | Sufficient for a single-node setup; Celery adds unnecessary complexity |
-
----
-
-## Stopping the Environment
-
-```bash
-docker compose down        # stop containers (data persisted in postgres_data volume)
-docker compose down -v     # stop and delete all data
-```
+| Star schema | The dashboard queries stay short and stable |
+| Left join from Spotify | The catalog is complete even when an artist never won |
+| Normalized `artist_key` | The two sources do not agree on casing |
+| Truncate and reload | A rerun replaces the warehouse instead of appending to it |
+| LocalExecutor | One node is enough; Celery adds a broker this pipeline does not need |
+| Flag the Grammy file as winners-only | `is_nominated` and `is_winner` match for linked artists, and the model should not pretend there are nominees in the source |

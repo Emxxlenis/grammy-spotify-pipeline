@@ -1,5 +1,5 @@
 """
-workshop2_etl_dag.py — ETL Pipeline: Spotify + Grammy Awards
+music_analytics_dag.py — Spotify x Grammy Awards analytics pipeline
 
 Task flow:
     extract_spotify_csv  ──────────────────────────────────┐
@@ -142,13 +142,13 @@ default_args = {
 }
 
 with DAG(
-    dag_id="workshop2_etl_pipeline",
-    description="ETL Workshop 2 — Spotify + Grammy Awards → Data Warehouse",
+    dag_id="music_analytics_pipeline",
+    description="Spotify catalog and Grammy Awards into a star-schema warehouse",
     default_args=default_args,
     start_date=datetime(2025, 1, 1),
     schedule_interval=None,
     catchup=False,
-    tags=["workshop2", "etl", "spotify", "grammys"],
+    tags=["etl", "spotify", "grammys", "analytics"],
 ) as dag:
 
     extract_spotify  = PythonOperator(task_id="extract_spotify_csv",    python_callable=task_extract_spotify)

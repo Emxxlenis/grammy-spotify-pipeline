@@ -1,4 +1,4 @@
-# Workshop 2 — ETL Pipeline (Apache Airflow + PostgreSQL + Streamlit)
+# Music analytics pipeline (Apache Airflow + PostgreSQL + Streamlit)
 #
 # Services:
 #   postgres           → PostgreSQL (Airflow metadata + grammys_db + data_warehouse)
@@ -44,7 +44,7 @@ services:
 
   postgres:
     image: postgres:15
-    container_name: workshop2_postgres
+    container_name: music_dw_postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-airflow}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airflow}
@@ -63,7 +63,7 @@ services:
 
   airflow-init:
     <<: *airflow-common
-    container_name: workshop2_airflow_init
+    container_name: music_dw_airflow_init
     entrypoint: /bin/bash
     command:
       - -c
@@ -80,7 +80,7 @@ services:
 
   airflow-webserver:
     <<: *airflow-common
-    container_name: workshop2_airflow_webserver
+    container_name: music_dw_airflow_webserver
     command: webserver
     ports:
       - "${AIRFLOW_WEBSERVER_PORT:-8080}:8080"
@@ -93,7 +93,7 @@ services:
 
   airflow-scheduler:
     <<: *airflow-common
-    container_name: workshop2_airflow_scheduler
+    container_name: music_dw_airflow_scheduler
     command: scheduler
     healthcheck:
       test: ["CMD", "airflow", "jobs", "check", "--job-type", "SchedulerJob", "--hostname", "$${HOSTNAME}"]
@@ -106,7 +106,7 @@ services:
     build:
       context: ./dashboard
       dockerfile: Dockerfile
-    container_name: workshop2_dashboard
+    container_name: music_dw_dashboard
     ports:
       - "${DASHBOARD_PORT:-8501}:8501"
     environment:

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spotify × Grammy · Emily Lenis</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+      background: #12100e;
+      color: #f3efe8;
+      line-height: 1.5;
+    }
+    main { max-width: 980px; margin: 0 auto; padding: 48px 20px 72px; }
+    p { color: #d9d0c4; }
+    a { color: #e7b15a; }
+    h1 { font-weight: 560; font-size: 2rem; letter-spacing: -0.03em; margin: 0 0 8px; }
+    h2 { font-size: 1.15rem; margin: 36px 0 12px; font-weight: 560; }
+    .lede { max-width: 68ch; }
+    .en { color: #a3988c; font-size: 0.92rem; }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 28px 0; }
+    .kpi { background: #1c1814; border: 1px solid #3a3128; border-radius: 12px; padding: 16px; }
+    .kpi b { display: block; font-size: 1.45rem; color: #fffaf3; font-weight: 600; }
+    .kpi span { color: #b3a89c; font-size: 0.82rem; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .card { background: #1c1814; border: 1px solid #3a3128; border-radius: 12px; padding: 16px 18px; }
+    .bar { display: grid; grid-template-columns: minmax(140px, 1.2fr) 3fr auto; gap: 10px; align-items: center; margin: 8px 0; font-size: 0.9rem; }
+    .bar i { display: block; height: 8px; background: #e7b15a; border-radius: 99px; }
+    .bar b { font-weight: 600; color: #fffaf3; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    th, td { text-align: left; padding: 8px 0; border-bottom: 1px solid #3a3128; }
+    th { color: #b3a89c; font-weight: 500; }
+    @media (max-width: 720px) {
+      .kpis, .split { grid-template-columns: 1fr; }
+      .bar { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="en">Music analytics warehouse. Spotify catalog joined to the Grammy Awards.</p>
+    <h1>Spotify × Grammy</h1>
+    <p class="lede">El catálogo y los premios quedan en una sola bodega. La pregunta que responde el cruce: la popularidad media de quien tiene un Grammy queda en 47.4, frente a 36.6 en el resto del catálogo.</p>
+    <p><a href="https://github.com/Emxxlenis/grammy-spotify-pipeline">Pipeline en Airflow</a></p>
+
+    <section class="kpis">
+      <div class="kpi"><b>89.741</b><span>temas únicos</span></div>
+      <div class="kpi"><b>17.640</b><span>artistas</span></div>
+      <div class="kpi"><b>466</b><span>artistas con al menos un Grammy en el cruce</span></div>
+      <div class="kpi"><b>101.872</b><span>filas después del join</span></div>
+    </section>
+
+    <div class="split">
+      <section class="card">
+        <h2>Popularidad media, mínimo 8 temas</h2>
+        <div class="bar"><span>Bad Bunny</span><i style="width:100%"></i><b>84.7</b></div><div class="bar"><span>Doja Cat</span><i style="width:98%"></i><b>83.3</b></div><div class="bar"><span>Lil Nas X</span><i style="width:98%"></i><b>82.8</b></div><div class="bar"><span>Eminem</span><i style="width:98%"></i><b>82.7</b></div><div class="bar"><span>Rauw Alejandro</span><i style="width:96%"></i><b>81.0</b></div><div class="bar"><span>Ariana Grande</span><i style="width:95%"></i><b>80.1</b></div>
+      </section>
+      <section class="card">
+        <h2>Categorías con más premios en la fuente</h2>
+        <div class="bar"><span>Song Of The Year</span><i style="width:100%"></i><b>70</b></div><div class="bar"><span>Record Of The Year</span><i style="width:99%"></i><b>69</b></div><div class="bar"><span>Album Of The Year</span><i style="width:94%"></i><b>66</b></div><div class="bar"><span>Best Opera Recording</span><i style="width:91%"></i><b>64</b></div><div class="bar"><span>Best Album Notes</span><i style="width:90%"></i><b>63</b></div><div class="bar"><span>Best Country Song</span><i style="width:79%"></i><b>55</b></div><div class="bar"><span>Best Instrumental Composition</span><i style="width:79%"></i><b>55</b></div><div class="bar"><span>Best New Artist</span><i style="width:73%"></i><b>51</b></div>
+      </section>
+    </div>
+
+    <h2>Perfil de audio, tema con premio contra el resto</h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>Rasgo</th><th>Con Grammy</th><th>Sin Grammy</th></tr></thead>
+        <tbody>
+          <tr><td>Bailabilidad</td><td>0.554</td><td>0.563</td></tr><tr><td>Energía</td><td>0.58</td><td>0.638</td></tr><tr><td>Acústico</td><td>0.362</td><td>0.326</td></tr><tr><td>Valencia</td><td>0.506</td><td>0.467</td></tr><tr><td>Habla</td><td>0.069</td><td>0.089</td></tr><tr><td>Directo</td><td>0.201</td><td>0.218</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Los premios de la fuente cubren 1958–2019 y son solo ganadores: 4.810 filas. El dashboard interactivo, con Airflow y PostgreSQL, se levanta en local con Docker. Esta página publica los agregados del mismo cruce para poder verlos sin la pila.</p>
+  </main>
+</body>
+</html>

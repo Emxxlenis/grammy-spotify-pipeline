@@ -1,6 +1,6 @@
 -- ============================================================
 -- Star Schema — Data Warehouse
--- Workshop 2: ETL with Spotify + Grammy Awards
+-- Star schema for the Spotify x Grammy analytics warehouse
 --
 -- Fact grain: one row per (artist × track × year × award category)
 -- ============================================================

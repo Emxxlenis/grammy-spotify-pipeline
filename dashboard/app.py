@@ -1,6 +1,6 @@
 """
 Spotify × Grammy Awards — ETL Dashboard
-Workshop 2 | Universidad Autónoma de Occidente
+Reads the analytics warehouse after the Airflow pipeline has loaded it.
 
 Reads directly from the data_warehouse PostgreSQL database.
 Access at: http://localhost:8501
@@ -56,7 +56,7 @@ except Exception as e:
 # Header
 # ---------------------------------------------------------------------------
 st.title("🎵 Spotify × Grammy Awards Dashboard")
-st.markdown("**Workshop 2 — ETL Pipeline** | Spotify + Grammy Awards (1958–2019)")
+st.markdown("Catalog and awards in one warehouse. Grammy coverage: 1958–2019.")
 st.divider()
 
 # ---------------------------------------------------------------------------
@@ -246,4 +246,4 @@ with col6:
 # Footer
 # ---------------------------------------------------------------------------
 st.divider()
-st.caption("Workshop 2 — ETL with Apache Airflow | Universidad Autónoma de Occidente")
+st.caption("Spotify × Grammy analytics warehouse · Airflow · PostgreSQL")
