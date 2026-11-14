@@ -4,35 +4,37 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Spotify × Grammy · Emily Lenis</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" />
   <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: "Segoe UI", Helvetica, Arial, sans-serif;
-      background: #12100e;
-      color: #f3efe8;
-      line-height: 1.5;
+    :root { color-scheme: light dark; --bg: #fff; --fg: #111827; --muted: #6b7280; --line: #e5e7eb; --card: #fff; --bar: #111827; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0a0a0a; --fg: #f3f4f6; --muted: #9ca3af; --line: #1f2937; --card: #111827; --bar: #e5e7eb; }
     }
-    main { max-width: 980px; margin: 0 auto; padding: 48px 20px 72px; }
-    p { color: #d9d0c4; }
-    a { color: #e7b15a; }
-    h1 { font-weight: 560; font-size: 2rem; letter-spacing: -0.03em; margin: 0 0 8px; }
-    h2 { font-size: 1.15rem; margin: 36px 0 12px; font-weight: 560; }
-    .lede { max-width: 68ch; }
-    .en { color: #a3988c; font-size: 0.92rem; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; }
+    .barra { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; height: 4rem; padding: 0 1.25rem; background: color-mix(in srgb, var(--bg) 86%, transparent); border-bottom: 1px solid var(--line); backdrop-filter: blur(12px); }
+    .sitio { color: var(--fg); font-weight: 300; font-size: 1.05rem; letter-spacing: -0.02em; text-decoration: none; }
+    .barra nav { display: flex; gap: 1rem; }
+    .barra nav a { color: var(--muted); font-size: 0.75rem; font-weight: 500; letter-spacing: 0.08em; text-decoration: none; }
+    main { max-width: 72rem; margin: 0 auto; padding: 3.5rem 1.25rem 5rem; }
+    p { color: var(--muted); }
+    a { color: var(--fg); }
+    h1 { font-weight: 300; font-size: clamp(2.4rem, 5vw, 4.25rem); letter-spacing: -0.03em; line-height: 1.1; margin: 0 0 0.75rem; }
+    h2 { font-size: 1.25rem; margin: 2.25rem 0 0.75rem; font-weight: 500; letter-spacing: -0.02em; }
+    .lede { max-width: 42rem; }
+    .en { color: var(--muted); font-size: 0.75rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
     .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 28px 0; }
-    .kpi { background: #1c1814; border: 1px solid #3a3128; border-radius: 12px; padding: 16px; }
-    .kpi b { display: block; font-size: 1.45rem; color: #fffaf3; font-weight: 600; }
-    .kpi span { color: #b3a89c; font-size: 0.82rem; }
+    .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 0.5rem; padding: 1.25rem 1.5rem; }
+    .kpi b { display: block; font-size: 1.75rem; color: var(--fg); font-weight: 500; letter-spacing: -0.03em; }
+    .kpi span { color: var(--muted); font-size: 0.82rem; }
     .split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-    .card { background: #1c1814; border: 1px solid #3a3128; border-radius: 12px; padding: 16px 18px; }
-    .bar { display: grid; grid-template-columns: minmax(140px, 1.2fr) 3fr auto; gap: 10px; align-items: center; margin: 8px 0; font-size: 0.9rem; }
-    .bar i { display: block; height: 8px; background: #e7b15a; border-radius: 99px; }
-    .bar b { font-weight: 600; color: #fffaf3; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 0.5rem; padding: 1.25rem 1.5rem; }
+    .bar { display: grid; grid-template-columns: minmax(140px, 1.2fr) 3fr auto; gap: 10px; align-items: center; margin: 8px 0; font-size: 0.9rem; color: var(--muted); }
+    .bar i { display: block; height: 8px; background: var(--bar); border-radius: 99px; }
+    .bar b { font-weight: 500; color: var(--fg); }
     table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
-    th, td { text-align: left; padding: 8px 0; border-bottom: 1px solid #3a3128; }
-    th { color: #b3a89c; font-weight: 500; }
+    th, td { text-align: left; padding: 8px 0; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 500; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; }
     @media (max-width: 720px) {
       .kpis, .split { grid-template-columns: 1fr; }
       .bar { grid-template-columns: 1fr; }
@@ -40,6 +42,13 @@
   </style>
 </head>
 <body>
+  <header class="barra">
+    <a class="sitio" href="https://www.emilylenis.com">Emily Lenis</a>
+    <nav>
+      <a href="https://www.emilylenis.com/projects">[ TRABAJO ]</a>
+      <a href="https://github.com/Emxxlenis/grammy-spotify-pipeline">[ CÓDIGO ]</a>
+    </nav>
+  </header>
   <main>
     <p class="en">Music analytics warehouse. Spotify catalog joined to the Grammy Awards.</p>
     <h1>Spotify × Grammy</h1>
